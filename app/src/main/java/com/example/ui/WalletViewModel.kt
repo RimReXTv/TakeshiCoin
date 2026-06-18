@@ -28,6 +28,47 @@ class WalletViewModel(application: Application) : AndroidViewModel(application) 
     )
     val isDarkTheme: StateFlow<Boolean?> = _isDarkTheme.asStateFlow()
 
+    private val _isPinEnabled = MutableStateFlow(sharedPrefs.getBoolean("is_pin_enabled", false))
+    val isPinEnabled: StateFlow<Boolean> = _isPinEnabled.asStateFlow()
+
+    private val _pinCode = MutableStateFlow(sharedPrefs.getString("pin_code", "1234") ?: "1234")
+    val pinCode: StateFlow<String> = _pinCode.asStateFlow()
+
+    private val _isAppLocked = MutableStateFlow(sharedPrefs.getBoolean("is_pin_enabled", false))
+    val isAppLocked: StateFlow<Boolean> = _isAppLocked.asStateFlow()
+
+    fun setPinEnabled(enabled: Boolean) {
+        _isPinEnabled.value = enabled
+        sharedPrefs.edit().putBoolean("is_pin_enabled", enabled).apply()
+        if (!enabled) {
+            _isAppLocked.value = false
+        } else {
+            _isAppLocked.value = true
+        }
+    }
+
+    fun setPinCode(newPin: String) {
+        if (newPin.length == 4) {
+            _pinCode.value = newPin
+            sharedPrefs.edit().putString("pin_code", newPin).apply()
+        }
+    }
+
+    fun lockApp() {
+        if (_isPinEnabled.value) {
+            _isAppLocked.value = true
+        }
+    }
+
+    fun unlockApp(enteredPin: String): Boolean {
+        return if (enteredPin == _pinCode.value) {
+            _isAppLocked.value = false
+            true
+        } else {
+            false
+        }
+    }
+
     fun setTheme(dark: Boolean?) {
         _isDarkTheme.value = dark
         if (dark == null) {

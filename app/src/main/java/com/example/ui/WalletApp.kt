@@ -2,6 +2,7 @@ package com.example.ui
 
 import android.widget.Toast
 import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
@@ -52,10 +53,13 @@ import kotlinx.coroutines.CoroutineScope
 @Composable
 fun WalletApp(viewModel: WalletViewModel) {
     val wallet by viewModel.walletState.collectAsStateWithLifecycle()
+    val isAppLocked by viewModel.isAppLocked.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
     if (wallet == null) {
         OnboardingScreen(viewModel = viewModel)
+    } else if (isAppLocked) {
+        PinLockScreen(viewModel = viewModel)
     } else {
         var currentTab by remember { mutableStateOf(0) }
         var showSendDialog by remember { mutableStateOf(false) }
@@ -333,6 +337,13 @@ fun WalletScreen(
     val wallet by viewModel.walletState.collectAsStateWithLifecycle()
     val transactions by viewModel.transactions.collectAsStateWithLifecycle()
     val isDark = viewModel.isDarkTheme.collectAsStateWithLifecycle(initialValue = null).value == true
+    var isBalanceHidden by remember { mutableStateOf(false) }
+    var entryAnimated by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        delay(50)
+        entryAnimated = true
+    }
     
     val df = remember { DecimalFormat("#,##0.00") }
     val elnDf = remember { DecimalFormat("#,##0") }
@@ -354,111 +365,146 @@ fun WalletScreen(
         val balanceCardSubTextColor = if (isDark) Color(0xFFBCCBB3) else Color(0xFF42493F)
         val balanceBorderColor = if (isDark) Color(0xFF43583E) else Color(0xFFBCCBB3)
 
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(28.dp))
-                .background(Brush.verticalGradient(colors = gradientColors))
-                .border(2.dp, balanceBorderColor, RoundedCornerShape(28.dp))
+        AnimatedVisibility(
+            visible = entryAnimated,
+            enter = fadeIn(animationSpec = tween(500)) + slideInVertically(initialOffsetY = { 40 }, animationSpec = tween(500))
         ) {
-            // High-fidelity holographic watermark layer representing Sovereign Global ledger network
-            val rayColor = if (isDark) Color(0xFFFCFDF6).copy(alpha = 0.05f) else Color(0xFF386A20).copy(alpha = 0.06f)
-            Canvas(modifier = Modifier.matchParentSize()) {
-                val w = size.width
-                val h = size.height
-                
-                // 1. Draw elegant diagonal fiber/laser grid lines
-                val spacing = 35.dp.toPx()
-                var currentOff = -w
-                while (currentOff < w * 2) {
-                    drawLine(
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(28.dp))
+                    .background(Brush.verticalGradient(colors = gradientColors))
+                    .border(2.dp, balanceBorderColor, RoundedCornerShape(28.dp))
+            ) {
+                // High-fidelity holographic watermark layer representing Sovereign Global ledger network
+                val rayColor = if (isDark) Color(0xFFFCFDF6).copy(alpha = 0.05f) else Color(0xFF386A20).copy(alpha = 0.06f)
+                Canvas(modifier = Modifier.matchParentSize()) {
+                    val w = size.width
+                    val h = size.height
+                    
+                    // 1. Draw elegant diagonal fiber/laser grid lines
+                    val spacing = 35.dp.toPx()
+                    var currentOff = -w
+                    while (currentOff < w * 2) {
+                        drawLine(
+                            color = rayColor,
+                            start = Offset(currentOff, 0f),
+                            end = Offset(currentOff + h, h),
+                            strokeWidth = 1.dp.toPx()
+                        )
+                        currentOff += spacing
+                    }
+                    
+                    // 2. Draw high-tech concentrical nodes representing L1 consensus nodes
+                    drawCircle(
                         color = rayColor,
-                        start = Offset(currentOff, 0f),
-                        end = Offset(currentOff + h, h),
-                        strokeWidth = 1.dp.toPx()
+                        radius = h * 0.45f,
+                        center = Offset(w * 0.85f, h * 0.5f),
+                        style = Stroke(width = 1.dp.toPx())
                     )
-                    currentOff += spacing
+                    drawCircle(
+                        color = rayColor,
+                        radius = h * 0.25f,
+                        center = Offset(w * 0.85f, h * 0.5f),
+                        style = Stroke(width = 1.dp.toPx())
+                    )
                 }
-                
-                // 2. Draw high-tech concentrical nodes representing L1 consensus nodes
-                drawCircle(
-                    color = rayColor,
-                    radius = h * 0.45f,
-                    center = Offset(w * 0.85f, h * 0.5f),
-                    style = Stroke(width = 1.dp.toPx())
-                )
-                drawCircle(
-                    color = rayColor,
-                    radius = h * 0.25f,
-                    center = Offset(w * 0.85f, h * 0.5f),
-                    style = Stroke(width = 1.dp.toPx())
-                )
-            }
 
-            Column(modifier = Modifier.padding(24.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "TOTAL BALANCE",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = balanceCardSubTextColor,
-                        letterSpacing = 1.sp
-                    )
-                    Box(
-                        modifier = Modifier
-                            .background(Color(0xFF386A20), RoundedCornerShape(100.dp))
-                            .padding(horizontal = 8.dp, vertical = 2.dp)
+                Column(modifier = Modifier.padding(24.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                text = "TOTAL BALANCE",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = balanceCardSubTextColor,
+                                letterSpacing = 1.sp
+                            )
+                            IconButton(
+                                onClick = { isBalanceHidden = !isBalanceHidden },
+                                modifier = Modifier.size(24.dp)
+                            ) {
+                                Text(
+                                    text = if (isBalanceHidden) "👁️" else "*",
+                                    fontSize = if (isBalanceHidden) 12.sp else 22.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = balanceCardSubTextColor,
+                                    modifier = Modifier.padding(bottom = if (isBalanceHidden) 0.dp else 4.dp)
+                                )
+                            }
+                        }
+                        Box(
+                            modifier = Modifier
+                                .background(Color(0xFF386A20), RoundedCornerShape(100.dp))
+                                .padding(horizontal = 8.dp, vertical = 2.dp)
+                        ) {
+                            Text(
+                                text = "MAINNET",
+                                fontSize = 9.sp,
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    val balanceTks = (wallet?.balanceEln ?: 0L).toDouble() / 100000000.0
+                    Row(
+                        verticalAlignment = Alignment.Bottom,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        AnimatedContent(
+                            targetState = isBalanceHidden,
+                            transitionSpec = {
+                                fadeIn(animationSpec = tween(300)) togetherWith fadeOut(animationSpec = tween(300))
+                            }
+                        ) { hidden ->
+                            Text(
+                                text = if (hidden) "****" else df.format(balanceTks),
+                                fontSize = 38.sp,
+                                fontWeight = FontWeight.Black,
+                                color = balanceCardTextColor
+                            )
+                        }
                         Text(
-                            text = "MAINNET",
-                            fontSize = 9.sp,
-                            color = Color.White,
-                            fontWeight = FontWeight.Bold
+                            text = "TKS",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF558B2F),
+                            modifier = Modifier.padding(bottom = 6.dp)
                         )
                     }
-                }
 
-                Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(4.dp))
 
-                val balanceTks = (wallet?.balanceEln ?: 0L).toDouble() / 100000000.0
-                Row(
-                    verticalAlignment = Alignment.Bottom,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    Text(
-                        text = df.format(balanceTks),
-                        fontSize = 38.sp,
-                        fontWeight = FontWeight.Black,
-                        color = balanceCardTextColor
-                    )
-                    Text(
-                        text = "TKS",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFF558B2F),
-                        modifier = Modifier.padding(bottom = 6.dp)
-                    )
-                }
+                    AnimatedContent(
+                        targetState = isBalanceHidden,
+                        transitionSpec = {
+                            fadeIn(animationSpec = tween(300)) togetherWith fadeOut(animationSpec = tween(300))
+                        }
+                    ) { hidden ->
+                        Text(
+                            text = if (hidden) "≈ •••• eln" else "≈ ${elnDf.format(wallet?.balanceEln ?: 0L)} eln",
+                            fontFamily = FontFamily.Monospace,
+                            fontSize = 12.sp,
+                            color = balanceCardSubTextColor
+                        )
+                    }
 
-                Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(24.dp))
 
-                Text(
-                    text = "≈ ${elnDf.format(wallet?.balanceEln ?: 0L)} eln",
-                    fontFamily = FontFamily.Monospace,
-                    fontSize = 12.sp,
-                    color = balanceCardSubTextColor
-                )
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
                     Button(
                         onClick = onSendClicked,
                         shape = RoundedCornerShape(100.dp),
@@ -492,6 +538,7 @@ fun WalletScreen(
                     }
                 }
             }
+        }
         }
 
         // Dual-Identity Accounts Card (v1.5 Sovereign Global)
@@ -1321,12 +1368,9 @@ fun SecurityScreen(viewModel: WalletViewModel) {
     val clipboard = LocalClipboardManager.current
     val context = LocalContext.current
 
-    // AI advisor chat variables
-    val chatMessages by viewModel.chatMessages.collectAsStateWithLifecycle()
-    val isLoading by viewModel.isChatLoading.collectAsStateWithLifecycle()
-    val thinkingProcess by viewModel.chatThinkingProcess.collectAsStateWithLifecycle()
-
-    var chatInput by remember { mutableStateOf("") }
+    val isPinEnabled by viewModel.isPinEnabled.collectAsStateWithLifecycle()
+    val pinCode by viewModel.pinCode.collectAsStateWithLifecycle()
+    var newPinInput by remember { mutableStateOf("") }
 
     Column(
         modifier = Modifier
@@ -1377,126 +1421,123 @@ fun SecurityScreen(viewModel: WalletViewModel) {
             }
         }
 
-        // Conversational AI interface (Cognitive AI Advisor with Thinking Mode)
-        Text("Takeshi Cognitive Node (Thinking Mode HIGH)", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
+        // Pin Settings
+        Text("Aparata Giriş Təhlükəsizliyi (Hardware Gateway)", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
 
         Box(
             modifier = Modifier
-                .weight(1f)
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(20.dp))
                 .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
                 .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f), RoundedCornerShape(20.dp))
-                .padding(12.dp)
+                .padding(16.dp)
         ) {
-            Column {
-                // Messages scrolled area
-                LazyColumn(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    items(chatMessages) { msg ->
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 4.dp),
-                            horizontalAlignment = if (msg.sender == "USER") Alignment.End else Alignment.Start
-                        ) {
-                            // Thinking header if any
-                            if (msg.thinking != null) {
-                                Box(
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(8.dp))
-                                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f))
-                                        .padding(8.dp)
-                                        .fillMaxWidth()
-                                ) {
-                                    Column {
-                                        Text("🧠 Deep Thought reasoning:", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                                        Text(msg.thinking, fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, fontFamily = FontFamily.Monospace)
-                                    }
-                                }
-                                Spacer(modifier = Modifier.height(4.dp))
-                            }
-
-                            val bubbleBg = if (msg.sender == "USER") MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant
-                            val bubbleTextColor = if (msg.sender == "USER") MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
-
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(16.dp))
-                                    .background(bubbleBg)
-                                    .padding(13.dp)
-                                    .widthIn(max = 280.dp)
-                            ) {
-                                Text(
-                                    text = msg.text,
-                                    fontSize = 12.sp,
-                                    color = bubbleTextColor
-                                )
-                            }
-                        }
-                    }
-
-                    // Loading thinking block
-                    if (isLoading) {
-                        item {
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.8f))
-                                    .padding(12.dp)
-                                    .fillMaxWidth()
-                            ) {
-                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.primary)
-                                    Text(
-                                        text = thinkingProcess ?: "Takeshi logic thinking...",
-                                        fontSize = 11.sp,
-                                        fontFamily = FontFamily.Monospace,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // Input line
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    OutlinedTextField(
-                        value = chatInput,
-                        onValueChange = { chatInput = it },
-                        placeholder = { Text("Ask about blocks, hashes, cooling...", fontSize = 12.sp) },
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(12.dp),
-                        maxLines = 2,
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = MaterialTheme.colorScheme.primary,
-                            focusedLabelColor = MaterialTheme.colorScheme.primary
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    if (isPinEnabled) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                                    else MaterialTheme.colorScheme.outline.copy(alpha = 0.1f)
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Lock,
+                                contentDescription = null,
+                                tint = if (isPinEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                        Column {
+                            Text(
+                                text = "Şifrəli Ekran Kilidi",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = if (isPinEnabled) "Aktivdir: Program açılışında PIN soruşulacaq" else "Deaktivdir",
+                                fontSize = 11.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
+                    Switch(
+                        checked = isPinEnabled,
+                        onCheckedChange = { isChecked ->
+                            viewModel.setPinEnabled(isChecked)
+                        },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                            checkedTrackColor = MaterialTheme.colorScheme.primary
                         )
                     )
+                }
 
-                    IconButton(
-                        onClick = {
-                            if (chatInput.isNotBlank()) {
-                                viewModel.sendChatMessage(chatInput)
-                                chatInput = ""
+                if (isPinEnabled) {
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(
+                            text = "PIN Kodun Dəyişdirilməsi:",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            OutlinedTextField(
+                                value = newPinInput,
+                                onValueChange = { input ->
+                                    if (input.length <= 4 && input.all { it.isDigit() }) {
+                                        newPinInput = input
+                                    }
+                                },
+                                label = { Text("4-Rəqəmli Yeni PIN") },
+                                placeholder = { Text("Cari: $pinCode") },
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(12.dp),
+                                maxLines = 1,
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                    focusedLabelColor = MaterialTheme.colorScheme.primary
+                                )
+                            )
+
+                            Button(
+                                onClick = {
+                                    if (newPinInput.length == 4) {
+                                        viewModel.setPinCode(newPinInput)
+                                        Toast.makeText(context, "Məlumat yeniləndi - PIN kodu təyin edildi!", Toast.LENGTH_SHORT).show()
+                                        newPinInput = ""
+                                    } else {
+                                        Toast.makeText(context, "Xəta: PIN kod mütləq 4 rəqəmdən ibarət olmalıdır!", Toast.LENGTH_SHORT).show()
+                                    }
+                                },
+                                shape = RoundedCornerShape(100.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                                modifier = Modifier.height(56.dp)
+                            ) {
+                                Text("Yadda Saxla", fontWeight = FontWeight.Bold)
                             }
-                        },
-                        modifier = Modifier
-                            .background(MaterialTheme.colorScheme.primary, CircleShape)
-                            .size(48.dp)
-                    ) {
-                        Icon(Icons.Default.Send, contentDescription = "Send", tint = MaterialTheme.colorScheme.onPrimary)
+                        }
                     }
                 }
             }
@@ -2456,5 +2497,202 @@ fun StorageHealthRow(
             color = color,
             trackColor = Color.LightGray.copy(alpha = 0.3f)
         )
+    }
+}
+
+@Composable
+fun PinLockScreen(viewModel: WalletViewModel) {
+    val isDarkOpt by viewModel.isDarkTheme.collectAsStateWithLifecycle()
+    val isDark = isDarkOpt ?: isSystemInDarkTheme()
+    val context = LocalContext.current
+    var pinValue by remember { mutableStateOf("") }
+    var pinError by remember { mutableStateOf(false) }
+    
+    // Coroutine scope for organic delay and feedback
+    val scope = rememberCoroutineScope()
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(
+                Brush.verticalGradient(
+                    colors = if (isDark) {
+                        listOf(Color(0xFF0F140D), Color(0xFF1B2217))
+                    } else {
+                        listOf(Color(0xFFFCFDF6), Color(0xFFE8F5E9))
+                    }
+                )
+            )
+            .padding(24.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        // Holographic grid alignment lines representing 2026 aesthetics
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val gridColor = if (isDark) Color(0xFF558B2F).copy(alpha = 0.05f) else Color(0xFF386A20).copy(alpha = 0.06f)
+            val strokeW = 1.dp.toPx()
+            val spacing = 40.dp.toPx()
+            
+            for (i in 0..(size.height / spacing).toInt()) {
+                val y = i * spacing
+                drawLine(gridColor, Offset(0f, y), Offset(size.width, y), strokeW)
+            }
+            for (i in 0..(size.width / spacing).toInt()) {
+                val x = i * spacing
+                drawLine(gridColor, Offset(x, 0f), Offset(x, size.height), strokeW)
+            }
+        }
+
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(28.dp),
+            modifier = Modifier.fillMaxWidth().widthIn(max = 400.dp)
+        ) {
+            // Futuristic Sovereign lock icon
+            Box(
+                modifier = Modifier
+                    .size(80.dp)
+                    .clip(CircleShape)
+                    .background(
+                        if (pinError) Color(0xFFC62828).copy(alpha = 0.15f)
+                        else MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                    )
+                    .border(
+                        2.dp,
+                        if (pinError) Color(0xFFC62828) else MaterialTheme.colorScheme.primary,
+                        CircleShape
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = if (pinError) Icons.Default.Warning else Icons.Default.Lock,
+                    contentDescription = "Lock Icon",
+                    tint = if (pinError) Color(0xFFC62828) else MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(36.dp)
+                )
+            }
+
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = "SOVEREIGN CABINET LOCKED",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = 1.sp,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+                Text(
+                    text = if (pinError) "ACCESS DENIED - TRY AGAIN" else "Məlumatı daxil edin: 4-Rəqəmli PIN kod",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    fontFamily = FontFamily.Monospace,
+                    color = if (pinError) Color(0xFFC62828) else MaterialTheme.colorScheme.primary
+                )
+            }
+
+            // Visual PIN circles representing dots
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                for (i in 0 until 4) {
+                    val isFilled = i < pinValue.length
+                    val dotColor = when {
+                        pinError -> Color(0xFFC62828)
+                        isFilled -> MaterialTheme.colorScheme.primary
+                        else -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f)
+                    }
+                    val sizeScale = if (isFilled) 14.dp else 10.dp
+                    Box(
+                        modifier = Modifier
+                            .size(sizeScale)
+                            .clip(CircleShape)
+                            .background(dotColor)
+                            .border(
+                                1.5.dp,
+                                if (isFilled) Color.Transparent else MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                                CircleShape
+                            )
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Premium Numeric Keypad
+            Column(
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                val buttonRows = listOf(
+                    listOf("1", "2", "3"),
+                    listOf("4", "5", "6"),
+                    listOf("7", "8", "9"),
+                    listOf("C", "0", "DEL")
+                )
+
+                for (row in buttonRows) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        for (key in row) {
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(60.dp)
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .background(
+                                        when {
+                                            key == "C" || key == "DEL" -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+                                            else -> MaterialTheme.colorScheme.surfaceVariant
+                                        }
+                                    )
+                                    .clickable {
+                                        if (pinError) {
+                                            pinError = false
+                                        }
+                                        when (key) {
+                                            "DEL" -> {
+                                                if (pinValue.isNotEmpty()) {
+                                                    pinValue = pinValue.dropLast(1)
+                                                }
+                                            }
+                                            "C" -> {
+                                                pinValue = ""
+                                            }
+                                            else -> {
+                                                if (pinValue.length < 4) {
+                                                    pinValue += key
+                                                    if (pinValue.length == 4) {
+                                                        scope.launch {
+                                                            delay(150)
+                                                            val success = viewModel.unlockApp(pinValue)
+                                                            if (!success) {
+                                                                pinError = true
+                                                                pinValue = ""
+                                                                Toast.makeText(context, "Səhvdir - təhlükəsizlik şifrəsi düzgün deyil", Toast.LENGTH_SHORT).show()
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = key,
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.Black,
+                                    color = if (key == "C" || key == "DEL") Color(0xFFC62828) else MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }
