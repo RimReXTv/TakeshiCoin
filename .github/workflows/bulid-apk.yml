@@ -11,7 +11,6 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      KEYSTORE_PATH: ${{ github.workspace }}/my-upload-key.jks
       STORE_PASSWORD: android12345
       KEY_PASSWORD: android12345
       KEY_ALIAS: upload
@@ -38,13 +37,7 @@ jobs:
           sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0"
           yes | sdkmanager --licenses >/dev/null 2>&1 || true
 
-      - name: Restore signing key from cache
-        uses: actions/cache@v4
-        with:
-          path: my-upload-key.jks
-          key: takeshicoin-release-key-v1
-
-      - name: Create signing key if missing
+      - name: Restore or create signing key
         shell: bash
         run: |
           if [ ! -f "my-upload-key.jks" ]; then
@@ -58,7 +51,6 @@ jobs:
               -keysize 2048 \
               -validity 10000
           fi
-          cp my-upload-key.jks "${KEYSTORE_PATH}"
 
       - name: Create local.properties
         shell: bash
@@ -76,8 +68,10 @@ jobs:
 
       - name: Bump version for this build
         shell: bash
+        env:
+          VERSION_CODE: ${{ github.run_number }}
+          VERSION_NAME: ${{ github.ref_name }}
         run: |
-          VERSION_CODE="${GITHUB_RUN_NUMBER}"
           if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
             VERSION_NAME="${GITHUB_REF_NAME#v}"
           else
@@ -94,18 +88,15 @@ jobs:
           version_code = os.environ["VERSION_CODE"]
           version_name = os.environ["VERSION_NAME"]
 
-          text2 = re.sub(r'versionCode\s*=\s*\d+', f'versionCode = {version_code}', text)
-          text2 = re.sub(r'versionName\s*=\s*".*?"', f'versionName = "{version_name}"', text2)
+          new_text = re.sub(r'versionCode\s*=\s*\d+', f'versionCode = {version_code}', text)
+          new_text = re.sub(r'versionName\s*=\s*".*?"', f'versionName = "{version_name}"', new_text)
 
-          if text2 == text:
+          if new_text == text:
               raise SystemExit("versionCode/versionName not found in app/build.gradle.kts")
 
-          path.write_text(text2)
+          path.write_text(new_text)
           print(f"Updated versionCode={version_code}, versionName={version_name}")
           PY
-        env:
-          VERSION_CODE: ${{ github.run_number }}
-          VERSION_NAME: ${{ github.ref_name }}
 
       - name: Download Gradle
         shell: bash
