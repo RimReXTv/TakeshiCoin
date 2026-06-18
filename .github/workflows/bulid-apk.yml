@@ -10,6 +10,14 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
+    env:
+      KEYSTORE_PATH: ${{ github.workspace }}/my-upload-key.jks
+      STORE_PASSWORD: android12345
+      KEY_PASSWORD: android12345
+      KEY_ALIAS: upload
+      GRADLE_VERSION: "9.3.1"
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -30,21 +38,41 @@ jobs:
           sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0"
           yes | sdkmanager --licenses >/dev/null 2>&1 || true
 
-      - name: Restore persistent debug keystore
+      - name: Restore signing key from cache
+        uses: actions/cache@v4
+        with:
+          path: my-upload-key.jks
+          key: takeshicoin-release-key-v1
+
+      - name: Create signing key if missing
         shell: bash
         run: |
-          mkdir -p ~/.android
-          if [ -n "${{ secrets.DEBUG_KEYSTORE_BASE64 }}" ]; then
-            echo "${{ secrets.DEBUG_KEYSTORE_BASE64 }}" | base64 -d > ~/.android/debug.keystore
-          else
-            echo "Missing secret DEBUG_KEYSTORE_BASE64"
-            exit 1
+          if [ ! -f "my-upload-key.jks" ]; then
+            keytool -genkeypair -v \
+              -keystore my-upload-key.jks \
+              -storepass "${STORE_PASSWORD}" \
+              -alias "${KEY_ALIAS}" \
+              -keypass "${KEY_PASSWORD}" \
+              -dname "CN=TakeshiCoin,O=TakeshiCoin,C=US" \
+              -keyalg RSA \
+              -keysize 2048 \
+              -validity 10000
           fi
+          cp my-upload-key.jks "${KEYSTORE_PATH}"
 
       - name: Create local.properties
         shell: bash
         run: |
           echo "sdk.dir=${ANDROID_SDK_ROOT}" > local.properties
+
+      - name: Create .env
+        shell: bash
+        run: |
+          if [ -n "${GEMINI_API_KEY}" ]; then
+            printf "GEMINI_API_KEY=%s\n" "${GEMINI_API_KEY}" > .env
+          else
+            printf "GEMINI_API_KEY=DUMMY_KEY_FOR_CI\n" > .env
+          fi
 
       - name: Bump version for this build
         shell: bash
@@ -53,7 +81,7 @@ jobs:
           if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
             VERSION_NAME="${GITHUB_REF_NAME#v}"
           else
-            VERSION_NAME="dev-${GITHUB_RUN_NUMBER}"
+            VERSION_NAME="build-${GITHUB_RUN_NUMBER}"
           fi
 
           python3 - <<'PY'
@@ -66,36 +94,34 @@ jobs:
           version_code = os.environ["VERSION_CODE"]
           version_name = os.environ["VERSION_NAME"]
 
-          text_new = re.sub(r'versionCode\s*=\s*\d+', f'versionCode = {version_code}', text)
-          text_new = re.sub(r'versionName\s*=\s*".*?"', f'versionName = "{version_name}"', text_new)
+          text2 = re.sub(r'versionCode\s*=\s*\d+', f'versionCode = {version_code}', text)
+          text2 = re.sub(r'versionName\s*=\s*".*?"', f'versionName = "{version_name}"', text2)
 
-          if text_new == text:
-              raise SystemExit("Could not find versionCode/versionName in app/build.gradle.kts")
+          if text2 == text:
+              raise SystemExit("versionCode/versionName not found in app/build.gradle.kts")
 
-          path.write_text(text_new)
-          print(f"Updated to versionCode={version_code}, versionName={version_name}")
+          path.write_text(text2)
+          print(f"Updated versionCode={version_code}, versionName={version_name}")
           PY
         env:
           VERSION_CODE: ${{ github.run_number }}
           VERSION_NAME: ${{ github.ref_name }}
 
-      - name: Make gradlew executable
-        shell: bash
-        run: chmod +x ./gradlew
-
-      - name: Build debug APK
-        shell: bash
-        run: ./gradlew assembleDebug --no-daemon --stacktrace
-
-      - name: Rename APK
+      - name: Download Gradle
         shell: bash
         run: |
-          mkdir -p dist
-          cp app/build/outputs/apk/debug/*.apk "dist/TakeshiCoin-${GITHUB_REF_NAME:-dev}-${GITHUB_RUN_NUMBER}.apk"
+          curl -fsSL "https://services.gradle.org/distributions/gradle-${GRADLE_VERSION}-bin.zip" -o gradle.zip
+          unzip -q gradle.zip -d "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/gradle-${GRADLE_VERSION}/bin" >> "$GITHUB_PATH"
+
+      - name: Build release APK
+        shell: bash
+        run: |
+          gradle -p . :app:assembleRelease --no-daemon --stacktrace
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: update-apk
-          path: dist/*.apk
+          name: TakeshiCoin-release-apk
+          path: app/build/outputs/apk/release/*.apk
           if-no-files-found: error
