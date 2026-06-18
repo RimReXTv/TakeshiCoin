@@ -1,0 +1,6 @@
+{
+  "name": "Takeshi Wallet",
+  "description": "Production-grade Layer-1 blockchain wallet for Takeshi Coin (TKS)",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,27 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    
+    <!-- Outer Golden Geometric Balance Coin Frame -->
+    <path
+        android:fillColor="#386a20"
+        android:pathData="M54,16 C33,16 16,33 16,54 C16,75 33,92 54,92 C75,92 92,75 92,54 C92,33 75,16 54,16 Z" />
+        
+    <!-- Golden Inner Metallic Ring -->
+    <path
+        android:fillColor="#bccbb3"
+        android:pathData="M54,20 C35.2,20 20,35.2 20,54 C20,72.8 35.2,88 54,88 C72.8,88 88,72.8 88,54 C88,35.2 72.8,20 54,20 Z" />
+
+    <!-- Pure Emerald Core -->
+    <path
+        android:fillColor="#386a20"
+        android:pathData="M54,24 C37.4,24 24,37.4 24,54 C24,70.6 37.4,84 54,84 C70.6,84 84,70.6 84,54 C84,37.4 70.6,24 54,24 Z" />
+
+    <!-- Futuristic 'T' Lettering Inside -->
+    <path
+        android:fillColor="#ffffff"
+        android:pathData="M38,36 H70 V44 H58 V72 H50 V44 H38 V36 Z" />
+        
+</vector>
