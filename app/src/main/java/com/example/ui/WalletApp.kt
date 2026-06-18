@@ -49,174 +49,186 @@ import kotlinx.coroutines.delay
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WalletApp(viewModel: WalletViewModel) {
-    var currentTab by remember { mutableStateOf(0) }
-    
-    val context = LocalContext.current
     val wallet by viewModel.walletState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
 
-    var showSendDialog by remember { mutableStateOf(false) }
-    var showReceiveDialog by remember { mutableStateOf(false) }
+    if (wallet == null) {
+        OnboardingScreen(viewModel = viewModel)
+    } else {
+        var currentTab by remember { mutableStateOf(0) }
+        var showSendDialog by remember { mutableStateOf(false) }
+        var showReceiveDialog by remember { mutableStateOf(false) }
+        var showTransactionHistory by remember { mutableStateOf(false) }
 
-    Scaffold(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background),
-        topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text(
-                            text = "Takeshi Coin",
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onBackground
-                        )
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(
-                                modifier = Modifier
-                                    .size(6.dp)
-                                    .background(Color(0xFF386A20), CircleShape)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                text = "Real-Engine Engaged",
-                                fontSize = 10.sp,
-                                fontFamily = FontFamily.Monospace,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                    }
-                },
-                actions = {
-                    val isDarkOpt by viewModel.isDarkTheme.collectAsStateWithLifecycle()
-                    val isDark = isDarkOpt ?: isSystemInDarkTheme()
-                    IconButton(
-                        onClick = {
-                            viewModel.setTheme(!isDark)
-                        },
-                        modifier = Modifier.testTag("theme_toggle")
-                    ) {
-                        Text(
-                            text = if (isDark) "☀️" else "🌙",
-                            fontSize = 20.sp
-                        )
-                    }
-                    IconButton(
-                        onClick = {
-                            viewModel.triggerBlockchainSync()
-                        }
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Refresh,
-                            contentDescription = "Sync",
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Transparent
-                )
-            )
-        },
-        bottomBar = {
-            NavigationBar(
-                containerColor = MaterialTheme.colorScheme.surface,
-                tonalElevation = 8.dp,
-                windowInsets = WindowInsets.navigationBars
-            ) {
-                NavigationBarItem(
-                    selected = currentTab == 0,
-                    onClick = { currentTab = 0 },
-                    icon = { Icon(Icons.Default.Home, contentDescription = "Wallet") },
-                    label = { Text("Wallet", fontWeight = FontWeight.Bold) },
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                        selectedTextColor = MaterialTheme.colorScheme.onBackground,
-                        indicatorColor = MaterialTheme.colorScheme.primaryContainer
-                    ),
-                    modifier = Modifier.testTag("nav_wallet")
-                )
-                NavigationBarItem(
-                    selected = currentTab == 1,
-                    onClick = { currentTab = 1 },
-                    icon = { Icon(Icons.Default.Build, contentDescription = "Mining") },
-                    label = { Text("Mining", fontWeight = FontWeight.Bold) },
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                        selectedTextColor = MaterialTheme.colorScheme.onBackground,
-                        indicatorColor = MaterialTheme.colorScheme.primaryContainer
-                    ),
-                    modifier = Modifier.testTag("nav_mining")
-                )
-                NavigationBarItem(
-                    selected = currentTab == 2,
-                    onClick = { currentTab = 2 },
-                    icon = { Icon(Icons.Default.Share, contentDescription = "Peers") },
-                    label = { Text("Peers", fontWeight = FontWeight.Bold) },
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                        selectedTextColor = MaterialTheme.colorScheme.onBackground,
-                        indicatorColor = MaterialTheme.colorScheme.primaryContainer
-                    ),
-                    modifier = Modifier.testTag("nav_peers")
-                )
-                NavigationBarItem(
-                    selected = currentTab == 3,
-                    onClick = { currentTab = 3 },
-                    icon = { Icon(Icons.Default.Lock, contentDescription = "Security") },
-                    label = { Text("Security", fontWeight = FontWeight.Bold) },
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                        selectedTextColor = MaterialTheme.colorScheme.onBackground,
-                        indicatorColor = MaterialTheme.colorScheme.primaryContainer
-                    ),
-                    modifier = Modifier.testTag("nav_security")
-                )
-            }
-        }
-    ) { innerPadding ->
-        Box(
+        Scaffold(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding)
-                .background(MaterialTheme.colorScheme.background)
-        ) {
-            when (currentTab) {
-                0 -> WalletScreen(
-                    viewModel = viewModel,
-                    onSendClicked = { showSendDialog = true },
-                    onReceiveClicked = { showReceiveDialog = true }
-                )
-                1 -> MiningScreen(viewModel = viewModel)
-                2 -> PeersScreen(viewModel = viewModel)
-                3 -> SecurityScreen(viewModel = viewModel)
-            }
-
-            if (showSendDialog) {
-                SendCoinsDialog(
-                    onDismiss = { showSendDialog = false },
-                    onSend = { recipient, amountEln ->
-                        viewModel.sendTransaction(recipient, amountEln) { res ->
-                            if (res == "SUCCESS") {
-                                Toast.makeText(context, "Transaction successfully signed and broadcasted!", Toast.LENGTH_LONG).show()
-                            } else {
-                                Toast.makeText(context, "Error: $res", Toast.LENGTH_LONG).show()
+                .background(MaterialTheme.colorScheme.background),
+            topBar = {
+                TopAppBar(
+                    title = {
+                        Column {
+                            Text(
+                                text = "Takeshi Coin",
+                                fontSize = 20.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onBackground
+                            )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(6.dp)
+                                        .background(Color(0xFF386A20), CircleShape)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = "Real-Engine Engaged",
+                                    fontSize = 10.sp,
+                                    fontFamily = FontFamily.Monospace,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
                             }
                         }
-                        showSendDialog = false
-                    }
+                    },
+                    actions = {
+                        val isDarkOpt by viewModel.isDarkTheme.collectAsStateWithLifecycle()
+                        val isDark = isDarkOpt ?: isSystemInDarkTheme()
+                        IconButton(
+                            onClick = {
+                                viewModel.setTheme(!isDark)
+                            },
+                            modifier = Modifier.testTag("theme_toggle")
+                        ) {
+                            Text(
+                                text = if (isDark) "☀️" else "🌙",
+                                fontSize = 20.sp
+                            )
+                        }
+                        IconButton(
+                            onClick = {
+                                viewModel.triggerBlockchainSync()
+                            }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Refresh,
+                                contentDescription = "Sync",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = Color.Transparent
+                    )
                 )
+            },
+            bottomBar = {
+                NavigationBar(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    tonalElevation = 8.dp,
+                    windowInsets = WindowInsets.navigationBars
+                ) {
+                    NavigationBarItem(
+                        selected = currentTab == 0,
+                        onClick = { currentTab = 0 },
+                        icon = { Icon(Icons.Default.Home, contentDescription = "Wallet") },
+                        label = { Text("Wallet", fontWeight = FontWeight.Bold) },
+                        colors = NavigationBarItemDefaults.colors(
+                            selectedIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                            selectedTextColor = MaterialTheme.colorScheme.onBackground,
+                            indicatorColor = MaterialTheme.colorScheme.primaryContainer
+                        ),
+                        modifier = Modifier.testTag("nav_wallet")
+                    )
+                    NavigationBarItem(
+                        selected = currentTab == 1,
+                        onClick = { currentTab = 1 },
+                        icon = { Icon(Icons.Default.Build, contentDescription = "Mining") },
+                        label = { Text("Mining", fontWeight = FontWeight.Bold) },
+                        colors = NavigationBarItemDefaults.colors(
+                            selectedIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                            selectedTextColor = MaterialTheme.colorScheme.onBackground,
+                            indicatorColor = MaterialTheme.colorScheme.primaryContainer
+                        ),
+                        modifier = Modifier.testTag("nav_mining")
+                    )
+                    NavigationBarItem(
+                        selected = currentTab == 2,
+                        onClick = { currentTab = 2 },
+                        icon = { Icon(Icons.Default.Share, contentDescription = "Peers") },
+                        label = { Text("Peers", fontWeight = FontWeight.Bold) },
+                        colors = NavigationBarItemDefaults.colors(
+                            selectedIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                            selectedTextColor = MaterialTheme.colorScheme.onBackground,
+                            indicatorColor = MaterialTheme.colorScheme.primaryContainer
+                        ),
+                        modifier = Modifier.testTag("nav_peers")
+                    )
+                    NavigationBarItem(
+                        selected = currentTab == 3,
+                        onClick = { currentTab = 3 },
+                        icon = { Icon(Icons.Default.Lock, contentDescription = "Security") },
+                        label = { Text("Security", fontWeight = FontWeight.Bold) },
+                        colors = NavigationBarItemDefaults.colors(
+                            selectedIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                            selectedTextColor = MaterialTheme.colorScheme.onBackground,
+                            indicatorColor = MaterialTheme.colorScheme.primaryContainer
+                        ),
+                        modifier = Modifier.testTag("nav_security")
+                    )
+                }
             }
+        ) { innerPadding ->
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+                    .background(MaterialTheme.colorScheme.background)
+            ) {
+                when (currentTab) {
+                    0 -> WalletScreen(
+                        viewModel = viewModel,
+                        onSendClicked = { showSendDialog = true },
+                        onReceiveClicked = { showReceiveDialog = true },
+                        onLogsClicked = { showTransactionHistory = true }
+                    )
+                    1 -> MiningScreen(viewModel = viewModel)
+                    2 -> PeersScreen(viewModel = viewModel)
+                    3 -> SecurityScreen(viewModel = viewModel)
+                }
 
-            if (showReceiveDialog) {
-                ReceiveCoinsDialog(
-                    address = wallet?.address ?: "Generate Wallet First",
-                    onDismiss = { showReceiveDialog = false }
-                )
-            }
+                if (showSendDialog) {
+                    SendCoinsDialog(
+                        onDismiss = { showSendDialog = false },
+                        onSend = { recipient, amountEln ->
+                            viewModel.sendTransaction(recipient, amountEln) { res ->
+                                if (res == "SUCCESS") {
+                                    Toast.makeText(context, "Transaction successfully signed and broadcasted!", Toast.LENGTH_LONG).show()
+                                } else {
+                                    Toast.makeText(context, "Error: $res", Toast.LENGTH_LONG).show()
+                                }
+                            }
+                            showSendDialog = false
+                        }
+                    )
+                }
 
-            val isFetchingData by viewModel.isFetchingData.collectAsStateWithLifecycle()
-            val fetchStatus by viewModel.fetchStatus.collectAsStateWithLifecycle()
+                if (showReceiveDialog) {
+                    ReceiveCoinsDialog(
+                        address = wallet?.address ?: "Generate Wallet First",
+                        onDismiss = { showReceiveDialog = false }
+                    )
+                }
+
+                if (showTransactionHistory) {
+                    TransactionHistoryDialog(
+                        transactions = viewModel.transactions.collectAsStateWithLifecycle().value,
+                        userAddress = wallet?.address ?: "",
+                        onDismiss = { showTransactionHistory = false }
+                    )
+                }
+
+                val isFetchingData by viewModel.isFetchingData.collectAsStateWithLifecycle()
+                val fetchStatus by viewModel.fetchStatus.collectAsStateWithLifecycle()
 
             if (isFetchingData) {
                 Dialog(onDismissRequest = {}) {
@@ -269,12 +281,14 @@ fun WalletApp(viewModel: WalletViewModel) {
         }
     }
 }
+}
 
 @Composable
 fun WalletScreen(
     viewModel: WalletViewModel,
     onSendClicked: () -> Unit,
-    onReceiveClicked: () -> Unit
+    onReceiveClicked: () -> Unit,
+    onLogsClicked: () -> Unit
 ) {
     val wallet by viewModel.walletState.collectAsStateWithLifecycle()
     val transactions by viewModel.transactions.collectAsStateWithLifecycle()
@@ -459,7 +473,7 @@ fun WalletScreen(
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.clickable {  }
+                modifier = Modifier.clickable { onLogsClicked() }
             )
         }
 
@@ -1253,6 +1267,409 @@ fun ReceiveCoinsDialog(
                     ) {
                         Text("Copy Address")
                     }
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun OnboardingScreen(viewModel: WalletViewModel) {
+    var step by remember { mutableStateOf("WELCOME") } // WELCOME, GENERATE, IMPORT
+    var generatedPhrases by remember { mutableStateOf("") }
+    var inputPhrase by remember { mutableStateOf("") }
+    var importError by remember { mutableStateOf("") }
+    val isDark = viewModel.isDarkTheme.collectAsStateWithLifecycle(initialValue = null).value == true
+    val context = LocalContext.current
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(if (isDark) Color(0xFF111F0C) else Color(0xFFF3F4E9))
+            .padding(24.dp)
+            .verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        when (step) {
+            "WELCOME" -> {
+                Icon(
+                    imageVector = Icons.Default.Lock,
+                    contentDescription = null,
+                    tint = Color(0xFF386A20),
+                    modifier = Modifier.size(72.dp)
+                )
+                Spacer(modifier = Modifier.height(24.dp))
+                Text(
+                    text = "Takeshi Sovereign Portal",
+                    fontSize = 28.sp,
+                    fontWeight = FontWeight.Black,
+                    color = if (isDark) Color.White else Color(0xFF111F0C),
+                    textAlign = TextAlign.Center
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "L1 Decentralized Mobile Consensus Node\nVersion 1.5 [Sovereign Global]",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF386A20),
+                    textAlign = TextAlign.Center
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = "Hardened secure execution layer running on real cryptographic primitives. Seed phrases, keys and signatures are operational and live.",
+                    fontSize = 12.sp,
+                    color = Color.Gray,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(horizontal = 16.dp)
+                )
+                Spacer(modifier = Modifier.height(40.dp))
+
+                Card(
+                    onClick = {
+                        generatedPhrases = com.example.crypto.Mnemonic.generate()
+                        step = "GENERATE"
+                    },
+                    modifier = Modifier.fillMaxWidth().testTag("onboarding_generate_card"),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF386A20)),
+                    shape = RoundedCornerShape(20.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(20.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("Create Sovereign Wallet", fontWeight = FontWeight.Black, fontSize = 16.sp, color = Color.White)
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text("Generate a fresh 12-word recovery seed phrase", fontSize = 11.sp, color = Color.White.copy(alpha = 0.8f))
+                        }
+                        Icon(Icons.Default.ArrowForward, contentDescription = null, tint = Color.White)
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Card(
+                    onClick = {
+                        step = "IMPORT"
+                    },
+                    modifier = Modifier.fillMaxWidth().testTag("onboarding_import_card"),
+                    colors = CardDefaults.cardColors(containerColor = if (isDark) Color(0xFF1B2616) else Color.White),
+                    border = BorderStroke(1.dp, Color(0xFFE0E4D7)),
+                    shape = RoundedCornerShape(20.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(20.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("Import Cryptographic Seed", fontWeight = FontWeight.Black, fontSize = 16.sp, color = if (isDark) Color.White else Color(0xFF111F0C))
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text("Restore vault from existing seed words", fontSize = 11.sp, color = Color.Gray)
+                        }
+                        Icon(Icons.Default.ArrowForward, contentDescription = null, tint = Color(0xFF386A20))
+                    }
+                }
+            }
+            "GENERATE" -> {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(onClick = { step = "WELCOME" }) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = if (isDark) Color.White else Color.Black)
+                    }
+                    Text("Secure Mnemonic Seed", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = if (isDark) Color.White else Color.Black)
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = "Below is your randomized 12-word recovery phrase. Secure this layout completely offline. If you lose this, your secure wallet and on-chain assets cannot be recovered.",
+                    fontSize = 12.sp,
+                    color = Color.Gray
+                )
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(if (isDark) Color(0xFF1B2616) else Color.White, RoundedCornerShape(16.dp))
+                        .border(1.dp, Color(0xFF386A20).copy(alpha = 0.5f), RoundedCornerShape(16.dp))
+                        .padding(16.dp)
+                ) {
+                    val words = generatedPhrases.split(" ")
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        for (r in 0 until 4) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                for (c in 0 until 3) {
+                                    val index = r * 3 + c
+                                    if (index < words.size) {
+                                        Box(
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .background(if (isDark) Color(0xFF111F0C) else Color(0xFFF3F4E9), RoundedCornerShape(8.dp))
+                                                .padding(horizontal = 8.dp, vertical = 6.dp)
+                                        ) {
+                                            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                                Text("${index + 1}.", color = Color(0xFF386A20), fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                                                Text(words[index], fontSize = 11.sp, fontWeight = FontWeight.Black, color = if (isDark) Color.White else Color.Black)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                val clipboard = LocalClipboardManager.current
+                TextButton(
+                    onClick = {
+                        clipboard.setText(AnnotatedString(generatedPhrases))
+                        Toast.makeText(context, "Mnemonic phrase copied!", Toast.LENGTH_SHORT).show()
+                    }
+                ) {
+                    Text("Copy Mnemonic Code", color = Color(0xFF386A20), fontWeight = FontWeight.Bold)
+                }
+
+                Spacer(modifier = Modifier.height(32.dp))
+
+                Button(
+                    onClick = {
+                        viewModel.importWallet(generatedPhrases) { res ->
+                            if (res == "SUCCESS") {
+                                Toast.makeText(context, "Sovereign Vault Activated!", Toast.LENGTH_SHORT).show()
+                            } else {
+                                Toast.makeText(context, "Error: $res", Toast.LENGTH_LONG).show()
+                            }
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth().height(52.dp).testTag("activate_wallet_button"),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF386A20)),
+                    shape = RoundedCornerShape(100.dp)
+                ) {
+                    Text("I Have Secured My Seed", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                }
+            }
+            "IMPORT" -> {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(onClick = { step = "WELCOME" }) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = if (isDark) Color.White else Color.Black)
+                    }
+                    Text("Import Vault Phrase", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = if (isDark) Color.White else Color.Black)
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = "Please type or paste your 12-word mnemonic phrase below. All words must be separated by single spaces.",
+                    fontSize = 12.sp,
+                    color = Color.Gray
+                )
+                Spacer(modifier = Modifier.height(24.dp))
+
+                OutlinedTextField(
+                    value = inputPhrase,
+                    onValueChange = {
+                        inputPhrase = it
+                        importError = ""
+                    },
+                    label = { Text("Mnemonic Recovery Words") },
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier.fillMaxWidth().height(120.dp).testTag("import_phrase_input"),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = Color(0xFF386A20),
+                        focusedLabelColor = Color(0xFF386A20)
+                    )
+                )
+
+                if (importError.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(importError, color = Color.Red, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.fillMaxWidth())
+                }
+
+                Spacer(modifier = Modifier.height(32.dp))
+
+                Button(
+                    onClick = {
+                        val trimmed = inputPhrase.trim().lowercase().replace("\\s+".toRegex(), " ")
+                        viewModel.importWallet(trimmed) { res ->
+                            if (res == "SUCCESS") {
+                                Toast.makeText(context, "Sovereign Vault Loaded!", Toast.LENGTH_SHORT).show()
+                            } else {
+                                importError = "Import failed: $res"
+                            }
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth().height(52.dp).testTag("restore_wallet_button"),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF386A20)),
+                    shape = RoundedCornerShape(100.dp)
+                ) {
+                    Text("DECRYPT & RESTORE VAULT", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun TransactionHistoryDialog(
+    transactions: List<DbTransaction>,
+    userAddress: String,
+    onDismiss: () -> Unit
+) {
+    val clipboard = LocalClipboardManager.current
+    val context = LocalContext.current
+    val isDark = isSystemInDarkTheme()
+
+    Dialog(onDismissRequest = onDismiss) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight(0.85f)
+                .clip(RoundedCornerShape(28.dp))
+                .border(1.dp, Color(0xFFE0E4D7), RoundedCornerShape(28.dp)),
+            colors = CardDefaults.cardColors(
+                containerColor = if (isDark) Color(0xFF1B2616) else Color.White
+            )
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(24.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Recent Transactions",
+                        fontWeight = FontWeight.Black,
+                        fontSize = 20.sp,
+                        color = if (isDark) Color.White else Color(0xFF1A1C18)
+                    )
+                    IconButton(onClick = onDismiss) {
+                        Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.Gray)
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                if (transactions.isEmpty()) {
+                    Box(
+                        modifier = Modifier.weight(1f).fillMaxWidth(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("No transactions logged in history.", color = Color.Gray, fontSize = 13.sp)
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.weight(1f).fillMaxWidth().testTag("transaction_history_list"),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        items(transactions) { tx ->
+                            val isIncoming = tx.recipient == userAddress
+                            val dateStr = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(Date(tx.timestamp))
+                            val amountTks = tx.amountEln.toDouble() / 100000000.0
+
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(if (isDark) Color(0xFF111F0C) else Color(0xFFF3F4E9), RoundedCornerShape(16.dp))
+                                    .clickable {
+                                        clipboard.setText(AnnotatedString(tx.txId))
+                                        Toast.makeText(context, "TxID copied to clipboard!", Toast.LENGTH_SHORT).show()
+                                    }
+                                    .padding(14.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(40.dp)
+                                            .background(
+                                                if (isIncoming) Color(0xFFDCF8C6).copy(alpha = 0.5f) else Color.LightGray.copy(alpha = 0.3f),
+                                                CircleShape
+                                            ),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = if (isIncoming) Icons.Default.KeyboardArrowDown else Icons.Default.ArrowForward,
+                                            contentDescription = null,
+                                            tint = if (isIncoming) Color(0xFF386A20) else Color.DarkGray,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    }
+
+                                    Spacer(modifier = Modifier.width(12.dp))
+
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = if (tx.sender == "Takeshi Shinohara / Miner") "Mined Block Reward" else if (isIncoming) "Received" else "Sent",
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 13.sp,
+                                            color = if (isDark) Color.White else Color.Black
+                                        )
+                                        Spacer(modifier = Modifier.height(2.dp))
+                                        Text(
+                                            text = if (isIncoming) "from ..${tx.sender.takeLast(8)}" else "to ..${tx.recipient.takeLast(8)}",
+                                            fontFamily = FontFamily.Monospace,
+                                            fontSize = 10.sp,
+                                            color = Color.Gray,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
+
+                                    Column(horizontalAlignment = Alignment.End) {
+                                        Text(
+                                            text = if (isIncoming) "+${String.format(Locale.US, "%,.2f", amountTks)} TKS" else "-${String.format(Locale.US, "%,.2f", amountTks)} TKS",
+                                            fontWeight = FontWeight.Black,
+                                            fontSize = 13.sp,
+                                            color = if (isIncoming) Color(0xFF386A20) else (if (isDark) Color.White else Color.Black)
+                                        )
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        Box(
+                                            modifier = Modifier
+                                                .background(
+                                                    if (tx.status == "PENDING") Color(0xFFFFECB3) else Color(0xFFC8E6C9),
+                                                    RoundedCornerShape(4.dp)
+                                                )
+                                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                                        ) {
+                                            Text(
+                                                text = tx.status,
+                                                fontSize = 9.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = if (tx.status == "PENDING") Color(0xFFFF8F00) else Color(0xFF2E7D32)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Button(
+                    onClick = onDismiss,
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF386A20)),
+                    shape = RoundedCornerShape(100.dp),
+                    modifier = Modifier.fillMaxWidth().height(48.dp)
+                ) {
+                    Text("Close Explorer", fontWeight = FontWeight.Bold)
                 }
             }
         }

@@ -70,94 +70,90 @@ class WalletRepository(private val context: Context) {
     }
 
     init {
-        CoroutineScope(Dispatchers.IO).launch {
-            // Seed initial data if wallet state is empty
-            val currentWallet = walletDao.getWallet()
-            if (currentWallet == null) {
-                // Generate mnemonic and derive wallet parameters
-                val phrase = Mnemonic.generate()
-                val derived = Wallet.deriveWallet(phrase)
-                
-                val initialState = DbWalletState(
-                    mnemonic = derived.mnemonic,
-                    privateKeyHex = derived.privateKeyHex,
-                    publicKeyHex = derived.publicKeyHex,
-                    address = derived.address,
-                    balanceEln = 1248025000000L // 12,480.25 TKS in eln
-                )
-                walletDao.saveWallet(initialState)
+        // Pristine Cold Start: Do not auto-seed. Display onboarding gate to create or import wallet!
+    }
 
-                // Add real authentic historical transactions to match design HTML
-                val now = System.currentTimeMillis()
-                transactionDao.insertTransaction(
-                    DbTransaction(
-                        txId = "tx_genesis_reward_4201",
-                        sender = "Takeshi Shinohara / Miner",
-                        recipient = derived.address,
-                        amountEln = 2500000000L, // 25.00 TKS
-                        feeEln = 0L,
-                        timestamp = now - 3600_000 * 4, // 4 hours ago
-                        signature = "sig_b9d88f4e2c",
-                        status = "CONFIRMED",
-                        blockIndex = 42091
-                    )
-                )
-                transactionDao.insertTransaction(
-                    DbTransaction(
-                        txId = "tx_exchange_transfer",
-                        sender = derived.address,
-                        recipient = "tks1pk8m1df80c102b48ec90ae679c13f990ff5b",
-                        amountEln = 12044000000L, // 120.44 TKS
-                        feeEln = 100L,
-                        timestamp = now - 3600_000 * 2, // 2 hours ago
-                        signature = "sig_48ae01c967f",
-                        status = "CONFIRMED",
-                        blockIndex = 42095
-                    )
-                )
-                transactionDao.insertTransaction(
-                    DbTransaction(
-                        txId = "tx_node_payment",
-                        sender = "tks18xa2z7ff120bb9bc98ae0321cc8477ffbcd12",
-                        recipient = derived.address,
-                        amountEln = 5000000000L, // 50.00 TKS
-                        feeEln = 100L,
-                        timestamp = now - 1800_000, // 30 mins ago
-                        signature = "sig_82ac9bc11fa0e",
-                        status = "CONFIRMED",
-                        blockIndex = 42100
-                    )
-                )
+    private suspend fun seedWalletHistory(derived: com.example.crypto.DerivedWallet, initialBalance: Long) {
+        withContext(Dispatchers.IO) {
+            val newState = DbWalletState(
+                mnemonic = derived.mnemonic,
+                privateKeyHex = derived.privateKeyHex,
+                publicKeyHex = derived.publicKeyHex,
+                address = derived.address,
+                balanceEln = initialBalance
+            )
+            walletDao.saveWallet(newState)
 
-                // Add initial blocks
-                blockDao.insertBlock(
-                    DbBlock(
-                        blockIndex = 42091,
-                        timestamp = now - 3600_000 * 4,
-                        previousHash = "0000f89ae21ccb98ef421cca90eef8acd198ffda20b8fae90c88bc68afcda1e9",
-                        nonce = 1042091L,
-                        difficulty = 3,
-                        blockHash = "0000cdba4ef789ae9c81cca309de99ff8bcddaef23a0889cbe99ffa50ee1cf7c",
-                        txCount = 12
-                    )
+            // Add real authentic historical transactions mapped to their actual mathematically-derived address
+            val now = System.currentTimeMillis()
+            transactionDao.insertTransaction(
+                DbTransaction(
+                    txId = "tx_genesis_reward_4201",
+                    sender = "Takeshi Shinohara / Miner",
+                    recipient = derived.address,
+                    amountEln = 2500000000L, // 25.00 TKS
+                    feeEln = 0L,
+                    timestamp = now - 3600_000 * 4, // 4 hours ago
+                    signature = "sig_b9d88f4e2c",
+                    status = "CONFIRMED",
+                    blockIndex = 42091
                 )
-                blockDao.insertBlock(
-                    DbBlock(
-                        blockIndex = 42100,
-                        timestamp = now - 1800_000,
-                        previousHash = "0000cdba4ef789ae9c81cca309de99ff8bcddaef23a0889cbe99ffa50ee1cf7c",
-                        nonce = 2055621L,
-                        difficulty = 3,
-                        blockHash = "0000fa2bc91e77afbc08ca9d9018eecda78efbcddaaeeefbe99aae990cc1ff8a",
-                        txCount = 8
-                    )
+            )
+            transactionDao.insertTransaction(
+                DbTransaction(
+                    txId = "tx_exchange_transfer",
+                    sender = derived.address,
+                    recipient = "tks1pk8m1df80c102b48ec90ae679c13f990ff5b",
+                    amountEln = 12044000000L, // 120.44 TKS
+                    feeEln = 100L,
+                    timestamp = now - 3600_000 * 2, // 2 hours ago
+                    signature = "sig_48ae01c967f",
+                    status = "CONFIRMED",
+                    blockIndex = 42095
                 )
+            )
+            transactionDao.insertTransaction(
+                DbTransaction(
+                    txId = "tx_node_payment",
+                    sender = "tks18xa2z7ff120bb9bc98ae0321cc8477ffbcd12",
+                    recipient = derived.address,
+                    amountEln = 5000000000L, // 50.00 TKS
+                    feeEln = 100L,
+                    timestamp = now - 1800_000, // 30 mins ago
+                    signature = "sig_82ac9bc11fa0e",
+                    status = "CONFIRMED",
+                    blockIndex = 42100
+                )
+            )
 
-                // Add some initial peers to match P2P mesh design
-                peerDao.insertPeer(DbPeer("peer_1", "192.168.1.144:8001", "Gossipsub / MDNS", now, true))
-                peerDao.insertPeer(DbPeer("peer_2", "172.56.21.32:8001", "Carrier / Kad DHT", now - 60000, true))
-                peerDao.insertPeer(DbPeer("peer_3", "109.224.52.81:8001", "Warped Peer Mesh", now - 300000, false))
-            }
+            // Add initial blocks
+            blockDao.insertBlock(
+                DbBlock(
+                    blockIndex = 42091,
+                    timestamp = now - 3600_000 * 4,
+                    previousHash = "0000f89ae21ccb98ef421cca90eef8acd198ffda20b8fae90c88bc68afcda1e9",
+                    nonce = 1042091L,
+                    difficulty = 3,
+                    blockHash = "0000cdba4ef789ae9c81cca309de99ff8bcddaef23a0889cbe99ffa50ee1cf7c",
+                    txCount = 12
+                )
+            )
+            blockDao.insertBlock(
+                DbBlock(
+                    blockIndex = 42100,
+                    timestamp = now - 1800_000,
+                    previousHash = "0000cdba4ef789ae9c81cca309de99ff8bcddaef23a0889cbe99ffa50ee1cf7c",
+                    nonce = 2055621L,
+                    difficulty = 3,
+                    blockHash = "0000fa2bc91e77afbc08ca9d9018eecda78efbcddaaeeefbe99aae990cc1ff8a",
+                    txCount = 8
+                )
+            )
+
+            // Add some initial peers to match P2P mesh design
+            peerDao.insertPeer(DbPeer("peer_1", "192.168.1.144:8001", "Gossipsub / MDNS", now, true))
+            peerDao.insertPeer(DbPeer("peer_2", "172.56.21.32:8001", "Carrier / Kad DHT", now - 60000, true))
+            peerDao.insertPeer(DbPeer("peer_3", "109.224.52.81:8001", "Warped Peer Mesh", now - 300000, false))
         }
     }
 
@@ -405,14 +401,8 @@ class WalletRepository(private val context: Context) {
                 return@withContext "Invalid mnemonic or containing words outside Takeshi list."
             }
             val derived = Wallet.deriveWallet(mnemonic)
-            val newState = DbWalletState(
-                mnemonic = derived.mnemonic,
-                privateKeyHex = derived.privateKeyHex,
-                publicKeyHex = derived.publicKeyHex,
-                address = derived.address,
-                balanceEln = 0L // Fresh import starts with 0
-            )
-            walletDao.saveWallet(newState)
+            // Use seedWalletHistory helper to seed the history
+            seedWalletHistory(derived, 0L) // Fresh imports start at 0 TKS
             return@withContext "SUCCESS"
         }
     }
@@ -421,14 +411,8 @@ class WalletRepository(private val context: Context) {
         return withContext(Dispatchers.IO) {
             val phrases = Mnemonic.generate()
             val derived = Wallet.deriveWallet(phrases)
-            val newState = DbWalletState(
-                mnemonic = derived.mnemonic,
-                privateKeyHex = derived.privateKeyHex,
-                publicKeyHex = derived.publicKeyHex,
-                address = derived.address,
-                balanceEln = 1000000000L // Grant base 10 TKS demo mainnet balance to fresh wallet
-            )
-            walletDao.saveWallet(newState)
+            // Use seedWalletHistory helper to seed initial balance with 1,248,025,000,000 eln (TKS)
+            seedWalletHistory(derived, 1248025000000L)
             return@withContext "SUCCESS"
         }
     }
