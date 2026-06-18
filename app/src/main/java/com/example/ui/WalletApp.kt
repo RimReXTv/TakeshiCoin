@@ -360,9 +360,42 @@ fun WalletScreen(
                 .clip(RoundedCornerShape(28.dp))
                 .background(Brush.verticalGradient(colors = gradientColors))
                 .border(2.dp, balanceBorderColor, RoundedCornerShape(28.dp))
-                .padding(24.dp)
         ) {
-            Column {
+            // High-fidelity holographic watermark layer representing Sovereign Global ledger network
+            val rayColor = if (isDark) Color(0xFFFCFDF6).copy(alpha = 0.05f) else Color(0xFF386A20).copy(alpha = 0.06f)
+            Canvas(modifier = Modifier.matchParentSize()) {
+                val w = size.width
+                val h = size.height
+                
+                // 1. Draw elegant diagonal fiber/laser grid lines
+                val spacing = 35.dp.toPx()
+                var currentOff = -w
+                while (currentOff < w * 2) {
+                    drawLine(
+                        color = rayColor,
+                        start = Offset(currentOff, 0f),
+                        end = Offset(currentOff + h, h),
+                        strokeWidth = 1.dp.toPx()
+                    )
+                    currentOff += spacing
+                }
+                
+                // 2. Draw high-tech concentrical nodes representing L1 consensus nodes
+                drawCircle(
+                    color = rayColor,
+                    radius = h * 0.45f,
+                    center = Offset(w * 0.85f, h * 0.5f),
+                    style = Stroke(width = 1.dp.toPx())
+                )
+                drawCircle(
+                    color = rayColor,
+                    radius = h * 0.25f,
+                    center = Offset(w * 0.85f, h * 0.5f),
+                    style = Stroke(width = 1.dp.toPx())
+                )
+            }
+
+            Column(modifier = Modifier.padding(24.dp)) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -585,12 +618,25 @@ fun WalletScreen(
                                     .size(36.dp)
                                     .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
                             ) {
-                                Icon(
-                                    imageVector = Icons.Default.Add, // Using Add as a fallback placeholder or we can use another icon
-                                    contentDescription = "Copy Address",
-                                    modifier = Modifier.size(16.dp),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
+                                val copyIconColor = MaterialTheme.colorScheme.onSurfaceVariant
+                                Canvas(modifier = Modifier.size(16.dp)) {
+                                    val strokeWidth = 1.6.dp.toPx()
+                                    val sizePx = size.width
+                                    // 1. Draw back copy sheet
+                                    drawRect(
+                                        color = copyIconColor,
+                                        topLeft = Offset(0f, 0f),
+                                        size = Size(sizePx * 0.6f, sizePx * 0.6f),
+                                        style = Stroke(width = strokeWidth)
+                                    )
+                                    // 2. Draw front copy sheet overlapping downwards
+                                    drawRect(
+                                        color = copyIconColor,
+                                        topLeft = Offset(sizePx * 0.4f, sizePx * 0.4f),
+                                        size = Size(sizePx * 0.6f, sizePx * 0.6f),
+                                        style = Stroke(width = strokeWidth)
+                                    )
+                                }
                             }
                             IconButton(
                                 onClick = {
@@ -822,36 +868,85 @@ fun MiningScreen(viewModel: WalletViewModel) {
                     Box(
                         modifier = Modifier
                             .weight(1f)
-                            .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(16.dp))
-                            .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f), RoundedCornerShape(16.dp))
-                            .padding(12.dp)
+                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f), RoundedCornerShape(16.dp))
+                            .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f), RoundedCornerShape(16.dp))
+                            .padding(14.dp)
                     ) {
-                        Column {
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Box(modifier = Modifier.size(6.dp).background(if (isMining) Color.Green else Color.Red, CircleShape))
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text("HASH RATE", fontSize = 8.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Box(modifier = Modifier.size(6.dp).background(if (isMining) Color(0xFF558B2F) else Color(0xFFC62828), CircleShape))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("HASH RATE", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, letterSpacing = 0.5.sp)
                             }
-                            Spacer(modifier = Modifier.height(6.dp))
-                            Text("${rateDf.format(hashRate)} MH/s", fontSize = 18.sp, fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.onSurface)
+                            Text("${rateDf.format(hashRate)} MH/s", fontSize = 20.sp, fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.onSurface)
+                            
+                            // Hardware-style multi-segment processor power bars (8 blocks)
+                            val segmentCount = 8
+                            val illuminatedSegs = if (isMining) ((hashRate / 6.0) * segmentCount).toInt().coerceIn(1, segmentCount) else 0
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                                horizontalArrangement = Arrangement.spacedBy(2.dp)
+                            ) {
+                                for (i in 0 until segmentCount) {
+                                    val isLit = i < illuminatedSegs
+                                    Box(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .height(5.dp)
+                                            .clip(RoundedCornerShape(100.dp))
+                                            .background(
+                                                if (isLit) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)
+                                            )
+                                    )
+                                }
+                            }
                         }
                     }
 
                     Box(
                         modifier = Modifier
                             .weight(1f)
-                            .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(16.dp))
-                            .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f), RoundedCornerShape(16.dp))
-                            .padding(12.dp)
+                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f), RoundedCornerShape(16.dp))
+                            .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f), RoundedCornerShape(16.dp))
+                            .padding(14.dp)
                     ) {
-                        Column {
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(10.dp))
-                                Spacer(modifier = Modifier.width(2.dp))
-                                Text("CORE TEMP", fontSize = 8.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Icon(
+                                    imageVector = Icons.Default.Warning,
+                                    contentDescription = null,
+                                    tint = if (coreTemp > 65) Color(0xFFC62828) else MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(12.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("CORE TEMP", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, letterSpacing = 0.5.sp)
                             }
-                            Spacer(modifier = Modifier.height(6.dp))
-                            Text("${tempDf.format(coreTemp)}°C", fontSize = 18.sp, fontWeight = FontWeight.Black, color = if (coreTemp > 65) Color.Red else MaterialTheme.colorScheme.onSurface)
+                            Text("${tempDf.format(coreTemp)}°C", fontSize = 20.sp, fontWeight = FontWeight.Black, color = if (coreTemp > 65) Color(0xFFC62828) else MaterialTheme.colorScheme.onSurface)
+                            
+                            // Thermal protection spectrum segment bars (8 blocks)
+                            val segmentCount = 8
+                            val activeSegs = ((coreTemp / 100.0) * segmentCount).toInt().coerceIn(1, segmentCount)
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                                horizontalArrangement = Arrangement.spacedBy(2.dp)
+                            ) {
+                                for (i in 0 until segmentCount) {
+                                    val isLit = i < activeSegs
+                                    val blockColor = when {
+                                        !isLit -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)
+                                        i >= 6 -> Color(0xFFC62828) // Thermal critical (Red)
+                                        i >= 4 -> Color(0xFFE65100) // Warming warning (Amber)
+                                        else -> MaterialTheme.colorScheme.primary // Cold/Optimal (Green)
+                                    }
+                                    Box(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .height(5.dp)
+                                            .clip(RoundedCornerShape(100.dp))
+                                            .background(blockColor)
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -901,32 +996,90 @@ fun MiningScreen(viewModel: WalletViewModel) {
         Text("Verified Mined Blocks", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
 
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            blocks.forEach { block ->
+            if (blocks.isEmpty()) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(16.dp))
-                        .background(MaterialTheme.colorScheme.surface)
-                        .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(16.dp))
-                        .padding(12.dp)
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f))
+                        .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f), RoundedCornerShape(16.dp))
+                        .padding(24.dp),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                    Text(
+                        text = "No blocks mined in this session yet.\nToggle the EcoARM Mining Switch to begin.",
+                        fontSize = 11.sp,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            } else {
+                blocks.forEach { block ->
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
+                            .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f), RoundedCornerShape(16.dp))
+                            .padding(14.dp)
                     ) {
-                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                            Text("Block #${block.blockIndex}", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
-                            Text("Hash: ${block.blockHash.take(18)}...", fontFamily = FontFamily.Monospace, fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Text("Nonce: ${block.nonce}", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-
-                        Box(
-                            modifier = Modifier
-                                .background(Color(0xFFD7E8CD), RoundedCornerShape(100.dp))
-                                .padding(horizontal = 10.dp, vertical = 4.dp)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text("+25.00 TKS", fontSize = 11.sp, color = Color(0xFF386A20), fontWeight = FontWeight.Bold)
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                // Dynamic 3D Isometric Core Block Icon drawn via Canvas!
+                                val blockPrimary = MaterialTheme.colorScheme.primary
+                                Canvas(modifier = Modifier.size(34.dp)) {
+                                    val sizePx = size.width
+                                    val hUnit = sizePx * 0.25f
+                                    val strokeW = 1.5.dp.toPx()
+                                    // Draw an elegant isometric hexagon representing a blockchain block
+                                    val path = Path().apply {
+                                        moveTo(sizePx * 0.5f, sizePx * 0.1f)
+                                        lineTo(sizePx * 0.9f, sizePx * 0.3f)
+                                        lineTo(sizePx * 0.9f, sizePx * 0.7f)
+                                        lineTo(sizePx * 0.5f, sizePx * 0.9f)
+                                        lineTo(sizePx * 0.1f, sizePx * 0.7f)
+                                        lineTo(sizePx * 0.1f, sizePx * 0.3f)
+                                        close()
+                                    }
+                                    drawPath(path = path, color = blockPrimary.copy(alpha = 0.15f))
+                                    drawPath(path = path, color = blockPrimary, style = Stroke(width = strokeW))
+                                    
+                                    // Y lines for isometric division
+                                    drawLine(color = blockPrimary, start = Offset(sizePx * 0.5f, sizePx * 0.1f), end = Offset(sizePx * 0.5f, sizePx * 0.9f), strokeWidth = strokeW)
+                                    drawLine(color = blockPrimary, start = Offset(sizePx * 0.5f, sizePx * 0.5f), end = Offset(sizePx * 0.1f, sizePx * 0.3f), strokeWidth = strokeW)
+                                    drawLine(color = blockPrimary, start = Offset(sizePx * 0.5f, sizePx * 0.5f), end = Offset(sizePx * 0.9f, sizePx * 0.3f), strokeWidth = strokeW)
+                                }
+                                
+                                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text("HEIGHT #${block.blockIndex}", fontWeight = FontWeight.Black, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface)
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Box(
+                                            modifier = Modifier
+                                                .size(6.dp)
+                                                .background(Color(0xFF558B2F), CircleShape)
+                                        )
+                                    }
+                                    Text("HASH: ${block.blockHash.take(16).uppercase()}...", fontFamily = FontFamily.Monospace, fontSize = 9.sp, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                                    Text("NONCE: ${block.nonce}", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, fontFamily = FontFamily.Monospace)
+                                }
+                            }
+
+                            Box(
+                                modifier = Modifier
+                                    .background(MaterialTheme.colorScheme.primaryContainer, RoundedCornerShape(12.dp))
+                                    .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f), RoundedCornerShape(12.dp))
+                                    .padding(horizontal = 10.dp, vertical = 6.dp)
+                            ) {
+                                Text("+25.00 TKS", fontSize = 11.sp, color = MaterialTheme.colorScheme.onPrimaryContainer, fontWeight = FontWeight.Black)
+                            }
                         }
                     }
                 }
@@ -956,7 +1109,35 @@ fun LiveWavesChart(isMining: Boolean, hashRate: Double) {
         }
     }
 
+    val primaryGreen = MaterialTheme.colorScheme.primary
+    val gridColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f)
+
     Canvas(modifier = Modifier.fillMaxSize()) {
+        // 1. Draw telemetry instrumentation grid background (Horizontal & Vertical Lines)
+        val gridRows = 5
+        val rowHeight = size.height / gridRows
+        for (i in 1 until gridRows) {
+            val y = i * rowHeight
+            drawLine(
+                color = gridColor,
+                start = Offset(0f, y),
+                end = Offset(size.width, y),
+                strokeWidth = 1.dp.toPx()
+            )
+        }
+
+        val gridCols = 8
+        val colWidth = size.width / gridCols
+        for (i in 1 until gridCols) {
+            val x = i * colWidth
+            drawLine(
+                color = gridColor,
+                start = Offset(x, 0f),
+                end = Offset(x, size.height),
+                strokeWidth = 1.dp.toPx()
+            )
+        }
+
         if (pointHistory.isNotEmpty()) {
             val path = Path()
             val stepX = size.width / 23f
@@ -964,6 +1145,9 @@ fun LiveWavesChart(isMining: Boolean, hashRate: Double) {
             // Draw gradient fill under curve
             val fillPath = Path()
             fillPath.moveTo(0f, size.height)
+
+            var lastPointX = 0f
+            var lastPointY = size.height
 
             pointHistory.forEachIndexed { i, score ->
                 val x = i * stepX
@@ -975,6 +1159,10 @@ fun LiveWavesChart(isMining: Boolean, hashRate: Double) {
                     path.lineTo(x, y)
                     fillPath.lineTo(x, y)
                 }
+                if (i == pointHistory.size - 1) {
+                    lastPointX = x
+                    lastPointY = y
+                }
             }
 
             fillPath.lineTo((pointHistory.size - 1) * stepX, size.height)
@@ -983,19 +1171,35 @@ fun LiveWavesChart(isMining: Boolean, hashRate: Double) {
             drawPath(
                 path = fillPath,
                 brush = Brush.verticalGradient(
-                    colors = listOf(Color(0xFF386A20).copy(alpha = 0.25f), Color.Transparent)
+                    colors = listOf(primaryGreen.copy(alpha = 0.25f), Color.Transparent)
                 )
             )
 
             drawPath(
                 path = path,
-                color = Color(0xFF386A20),
+                color = primaryGreen,
                 style = Stroke(width = 3.dp.toPx())
             )
+
+            // 2. High-Fidelity Pulse beacon representing live mining metrics on the last node!
+            if (isMining && lastPointX > 0f) {
+                // Outer breathing sonar ring
+                drawCircle(
+                    color = primaryGreen.copy(alpha = 0.2f),
+                    radius = 12.dp.toPx(),
+                    center = Offset(lastPointX, lastPointY)
+                )
+                // Inner solid core
+                drawCircle(
+                    color = primaryGreen,
+                    radius = 4.dp.toPx(),
+                    center = Offset(lastPointX, lastPointY)
+                )
+            }
         } else {
             // Draw simple flat line if idle
             drawLine(
-                color = Color(0xFFE0E4D7),
+                color = gridColor.copy(alpha = 0.2f),
                 start = Offset(0f, size.height * 0.9f),
                 end = Offset(size.width, size.height * 0.9f),
                 strokeWidth = 2.dp.toPx()
@@ -1021,14 +1225,14 @@ fun PeersScreen(viewModel: WalletViewModel) {
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(20.dp))
-                .background(Color(0xFFF3F4E9))
-                .border(1.dp, Color(0xFFE0E4D7), RoundedCornerShape(20.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f), RoundedCornerShape(20.dp))
                 .padding(16.dp)
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text("LIBP2P MESH COMMUNICATOR", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.Gray)
-                Text("Gossipsub Nodes Detected", fontSize = 16.sp, fontWeight = FontWeight.Black, color = Color(0xFF1A1C18))
-                Text("MDNS discovery auto-syncs local subnets. Carrier DHT coordinates transactions continuously across hops.", fontSize = 11.sp, color = Color.DarkGray)
+                Text("LIBP2P MESH COMMUNICATOR", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                Text("Gossipsub Nodes Detected", fontSize = 16.sp, fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.onSurface)
+                Text("MDNS discovery auto-syncs local subnets. Carrier DHT coordinates transactions continuously across hops.", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
 
@@ -1047,8 +1251,8 @@ fun PeersScreen(viewModel: WalletViewModel) {
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
                 maxLines = 1,
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = Color(0xFF386A20),
-                    focusedLabelColor = Color(0xFF386A20)
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    focusedLabelColor = MaterialTheme.colorScheme.primary
                 )
             )
 
@@ -1064,7 +1268,7 @@ fun PeersScreen(viewModel: WalletViewModel) {
                     }
                 },
                 shape = RoundedCornerShape(100.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF386A20)),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                 modifier = Modifier.height(56.dp)
             ) {
                 Text("Connect")
@@ -1072,7 +1276,7 @@ fun PeersScreen(viewModel: WalletViewModel) {
         }
 
         // Active peer list
-        Text("Routing Tables / active links (${peers.size})", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+        Text("Routing Tables / active links (${peers.size})", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = MaterialTheme.colorScheme.onBackground)
 
         LazyColumn(
             verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -1083,8 +1287,8 @@ fun PeersScreen(viewModel: WalletViewModel) {
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(16.dp))
-                        .background(Color.White)
-                        .border(1.dp, Color(0xFFE0E4D7), RoundedCornerShape(16.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                        .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f), RoundedCornerShape(16.dp))
                         .padding(12.dp)
                 ) {
                     Row(
@@ -1093,16 +1297,16 @@ fun PeersScreen(viewModel: WalletViewModel) {
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column {
-                            Text(peer.address, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                            Text(peer.carrier, fontSize = 11.sp, color = Color.Gray)
+                            Text(peer.address, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface)
+                            Text(peer.carrier, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
 
                         Box(
                             modifier = Modifier
-                                .background(Color(0xFFD7E8CD), CircleShape)
+                                .background(MaterialTheme.colorScheme.primaryContainer, CircleShape)
                                 .padding(horizontal = 8.dp, vertical = 2.dp)
                         ) {
-                            Text("CONNECTED", fontSize = 8.sp, color = Color(0xFF386A20), fontWeight = FontWeight.Bold)
+                            Text("CONNECTED", fontSize = 8.sp, color = MaterialTheme.colorScheme.onPrimaryContainer, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -1135,19 +1339,19 @@ fun SecurityScreen(viewModel: WalletViewModel) {
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(20.dp))
-                .background(Color(0xFFF3F4E9))
-                .border(1.dp, Color(0xFFE0E4D7), RoundedCornerShape(20.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f), RoundedCornerShape(20.dp))
                 .padding(16.dp)
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text("SECURE KEY ENCLAVE", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.Gray)
-                Text("BIP-44 Protocol Setup", fontSize = 16.sp, fontWeight = FontWeight.Black, color = Color(0xFF1A1C18))
+                Text("SECURE KEY ENCLAVE", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                Text("BIP-44 Protocol Setup", fontSize = 16.sp, fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.onSurface)
                 
                 Spacer(modifier = Modifier.height(10.dp))
                 
-                Text("Path: m/44'/999'/0'/0/0 (Takeshi Coin CoinType 999)", fontSize = 12.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, color = Color(0xFF386A20))
-                Text("Mnemonic Seed Words:", fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                Text(wallet?.mnemonic ?: "Loading...", fontSize = 12.sp, fontFamily = FontFamily.Monospace, color = Color.DarkGray)
+                Text("Path: m/44'/999'/0'/0/0 (Takeshi Coin CoinType 999)", fontSize = 11.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                Text("Mnemonic Seed Words:", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                Text(wallet?.mnemonic ?: "Loading...", fontSize = 12.sp, fontFamily = FontFamily.Monospace, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 
                 Spacer(modifier = Modifier.height(10.dp))
                 
@@ -1159,8 +1363,11 @@ fun SecurityScreen(viewModel: WalletViewModel) {
                         }
                     },
                     shape = RoundedCornerShape(100.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = Color(0xFF386A20)),
-                    border = BorderStroke(1.dp, Color(0xFFBCCBB3)),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    ),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Icon(Icons.Default.Lock, contentDescription = null, modifier = Modifier.size(16.dp))
@@ -1171,15 +1378,15 @@ fun SecurityScreen(viewModel: WalletViewModel) {
         }
 
         // Conversational AI interface (Cognitive AI Advisor with Thinking Mode)
-        Text("Takeshi Cognitive Node (Thinking Mode HIGH)", fontSize = 14.sp, fontWeight = FontWeight.Bold)
+        Text("Takeshi Cognitive Node (Thinking Mode HIGH)", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
 
         Box(
             modifier = Modifier
                 .weight(1f)
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(20.dp))
-                .background(Color.White)
-                .border(1.dp, Color(0xFFE0E4D7), RoundedCornerShape(20.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+                .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f), RoundedCornerShape(20.dp))
                 .padding(12.dp)
         ) {
             Column {
@@ -1202,31 +1409,32 @@ fun SecurityScreen(viewModel: WalletViewModel) {
                                 Box(
                                     modifier = Modifier
                                         .clip(RoundedCornerShape(8.dp))
-                                        .background(Color(0xFFF0F1EA))
+                                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f))
                                         .padding(8.dp)
                                         .fillMaxWidth()
                                 ) {
                                     Column {
-                                        Text("🧠 Deep Thought reasoning:", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color.Gray)
-                                        Text(msg.thinking, fontSize = 10.sp, color = Color.DarkGray, fontFamily = FontFamily.Monospace)
+                                        Text("🧠 Deep Thought reasoning:", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                                        Text(msg.thinking, fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, fontFamily = FontFamily.Monospace)
                                     }
                                 }
                                 Spacer(modifier = Modifier.height(4.dp))
                             }
 
+                            val bubbleBg = if (msg.sender == "USER") MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant
+                            val bubbleTextColor = if (msg.sender == "USER") MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+
                             Box(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(16.dp))
-                                    .background(
-                                        if (msg.sender == "USER") Color(0xFFD7E8CD) else Color(0xFFF3F4E9)
-                                    )
-                                    .padding(12.dp)
+                                    .background(bubbleBg)
+                                    .padding(13.dp)
                                     .widthIn(max = 280.dp)
                             ) {
                                 Text(
                                     text = msg.text,
                                     fontSize = 12.sp,
-                                    color = Color(0xFF1A1C18)
+                                    color = bubbleTextColor
                                 )
                             }
                         }
@@ -1238,17 +1446,17 @@ fun SecurityScreen(viewModel: WalletViewModel) {
                             Box(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(12.dp))
-                                    .background(Color(0xFFE8ECE2))
+                                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.8f))
                                     .padding(12.dp)
                                     .fillMaxWidth()
                             ) {
                                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp, color = Color(0xFF386A20))
+                                    CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.primary)
                                     Text(
                                         text = thinkingProcess ?: "Takeshi logic thinking...",
                                         fontSize = 11.sp,
                                         fontFamily = FontFamily.Monospace,
-                                        color = Color.DarkGray
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
                             }
@@ -1272,8 +1480,8 @@ fun SecurityScreen(viewModel: WalletViewModel) {
                         shape = RoundedCornerShape(12.dp),
                         maxLines = 2,
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = Color(0xFF386A20),
-                            focusedLabelColor = Color(0xFF386A20)
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            focusedLabelColor = MaterialTheme.colorScheme.primary
                         )
                     )
 
@@ -1285,10 +1493,10 @@ fun SecurityScreen(viewModel: WalletViewModel) {
                             }
                         },
                         modifier = Modifier
-                            .background(Color(0xFF386A20), CircleShape)
+                            .background(MaterialTheme.colorScheme.primary, CircleShape)
                             .size(48.dp)
                     ) {
-                        Icon(Icons.Default.Send, contentDescription = "Send", tint = Color.White)
+                        Icon(Icons.Default.Send, contentDescription = "Send", tint = MaterialTheme.colorScheme.onPrimary)
                     }
                 }
             }
@@ -1875,51 +2083,78 @@ fun AddressQRCode(address: String, modifier: Modifier = Modifier) {
         h
     }
     
-    Canvas(
+    Box(
         modifier = modifier
-            .size(100.dp)
-            .background(Color.White, RoundedCornerShape(12.dp))
-            .padding(8.dp)
+            .background(Color.White, RoundedCornerShape(16.dp))
+            .padding(12.dp),
+        contentAlignment = Alignment.Center
     ) {
-        val sizePx = size.width
-        val cols = 12
-        val cellSize = sizePx / cols
-        
-        // Draw standard QR finder patterns in 3 corners
-        fun drawFinderPattern(offsetX: Float, offsetY: Float) {
-            drawRect(
-                color = Color.Black,
-                topLeft = Offset(offsetX, offsetY),
-                size = Size(cellSize * 3, cellSize * 3)
-            )
-            drawRect(
-                color = Color.White,
-                topLeft = Offset(offsetX + cellSize, offsetY + cellSize),
-                size = Size(cellSize, cellSize)
-            )
+        // Draw 4 futuristic target scan brackets in the corner nodes
+        Canvas(modifier = Modifier.size(108.dp)) {
+            val length = 12.dp.toPx()
+            val strokeW = 2.5.dp.toPx()
+            val specColor = Color(0xFF386A20) // Elite biometric scanning green
+
+            // Top Left bracket
+            drawLine(specColor, Offset(0f, 0f), Offset(length, 0f), strokeW)
+            drawLine(specColor, Offset(0f, 0f), Offset(0f, length), strokeW)
+
+            // Top Right bracket
+            drawLine(specColor, Offset(size.width, 0f), Offset(size.width - length, 0f), strokeW)
+            drawLine(specColor, Offset(size.width, 0f), Offset(size.width, length), strokeW)
+
+            // Bottom Left bracket
+            drawLine(specColor, Offset(0f, size.height), Offset(length, size.height), strokeW)
+            drawLine(specColor, Offset(0f, size.height), Offset(0f, size.height - length), strokeW)
+
+            // Bottom Right bracket
+            drawLine(specColor, Offset(size.width, size.height), Offset(size.width - length, size.height), strokeW)
+            drawLine(specColor, Offset(size.width, size.height), Offset(size.width, size.height - length), strokeW)
         }
-        
-        drawFinderPattern(0f, 0f)
-        drawFinderPattern((cols - 3) * cellSize, 0f)
-        drawFinderPattern(0f, (cols - 3) * cellSize)
-        
-        var bitIndex = 0
-        for (r in 0 until cols) {
-            for (c in 0 until cols) {
-                val inTopLeft = r < 3 && c < 3
-                val inTopRight = r < 3 && c >= cols - 3
-                val inBottomLeft = r >= cols - 3 && c < 3
-                if (inTopLeft || inTopRight || inBottomLeft) continue
-                
-                val bit = ((hash ushr bitIndex) and 1L) == 1L
-                bitIndex = (bitIndex + 1) % 48
-                
-                if (bit) {
-                    drawRect(
-                        color = Color.Black,
-                        topLeft = Offset(c * cellSize, r * cellSize),
-                        size = Size(cellSize, cellSize)
-                    )
+
+        Canvas(
+            modifier = Modifier.size(86.dp)
+        ) {
+            val sizePx = size.width
+            val cols = 12
+            val cellSize = sizePx / cols
+            
+            // Draw standard QR finder patterns in 3 corners
+            fun drawFinderPattern(offsetX: Float, offsetY: Float) {
+                drawRect(
+                    color = Color.Black,
+                    topLeft = Offset(offsetX, offsetY),
+                    size = Size(cellSize * 3, cellSize * 3)
+                )
+                drawRect(
+                    color = Color.White,
+                    topLeft = Offset(offsetX + cellSize, offsetY + cellSize),
+                    size = Size(cellSize, cellSize)
+                )
+            }
+            
+            drawFinderPattern(0f, 0f)
+            drawFinderPattern((cols - 3) * cellSize, 0f)
+            drawFinderPattern(0f, (cols - 3) * cellSize)
+            
+            var bitIndex = 0
+            for (r in 0 until cols) {
+                for (c in 0 until cols) {
+                    val inTopLeft = r < 3 && c < 3
+                    val inTopRight = r < 3 && c >= cols - 3
+                    val inBottomLeft = r >= cols - 3 && c < 3
+                    if (inTopLeft || inTopRight || inBottomLeft) continue
+                    
+                    val bit = ((hash ushr bitIndex) and 1L) == 1L
+                    bitIndex = (bitIndex + 1) % 48
+                    
+                    if (bit) {
+                        drawRect(
+                            color = Color.Black,
+                            topLeft = Offset(c * cellSize, r * cellSize),
+                            size = Size(cellSize, cellSize)
+                        )
+                    }
                 }
             }
         }
